@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: https://*.thunderstore.io; font-src 'self'">
+  <title>BoneLaunch</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="home">
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop-img" id="bgimg"></div>
+    <div class="backdrop-floor"></div>
+  </div>
+
+  <header class="titlebar">
+    <div class="brand">
+      <img src="../../assets/icon.png" alt="">
+      <span>BONE<b>LAUNCH</b></span>
+    </div>
+    <div class="tb-drag"></div>
+    <div class="tb-status" id="tb-status"></div>
+    <div class="tb-buttons">
+      <button data-action="win-min" title="Minimize" aria-label="Minimize"><svg viewBox="0 0 12 12"><path d="M2 6h8" /></svg></button>
+      <button data-action="win-max" title="Maximize" aria-label="Maximize"><svg viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" /></svg></button>
+      <button data-action="win-close" class="tb-close" title="Close" aria-label="Close"><svg viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" /></svg></button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="side" id="nav"></nav>
+    <main id="main" tabindex="-1"></main>
+  </div>
+
+  <aside class="drawer" id="drawer" aria-hidden="true"></aside>
+  <div class="scrim" id="scrim" data-action="close-drawer"></div>
+  <div class="jobbar" id="jobbar" hidden></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div class="modal" id="modal" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
