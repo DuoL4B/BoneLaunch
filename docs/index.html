@@ -507,16 +507,17 @@ h2::after { content: ""; flex: 1; height: 10px; background: repeating-linear-gra
    ===================================================================== */
 const RELEASE = {
   repo: "DuoL4B/BoneLaunch",                  // GitHub "owner/name"
-  file: "BoneLaunch-Setup-1.2.0.exe",         // the installer attached to the release
-  portable: "BoneLaunch-Portable-1.2.0.exe",  // "" to hide the portable link
-  version: "v1.2.0",
+  file: "BoneLaunch-Setup-1.3.0.exe",         // the installer attached to the release
+  portable: "BoneLaunch-Portable-1.3.0.exe",  // "" to hide the portable link
+  version: "v1.3.0",
   size: "1.5 MB",
-  date: "2026-11-10",
+  date: "2026-11-11",
 };
 RELEASE.url = RELEASE.repo ? "https://github.com/" + RELEASE.repo + "/releases/latest/download/" + RELEASE.file : "";
 
 /* Revision history, newest first. Add an entry per release. */
 const REVISIONS = [
+  { version: "v1.3.0", date: "2026-11-11", notes: ["New: a mod.io page. Download a mod from mod.io by hand and BoneLaunch installs the zip, lists your mod.io mods and switches them on or off.", "New: the Camerium in-game camera, one switch in Settings."] },
   { version: "v1.2.0", date: "2026-11-10", notes: ["New: BoneLaunch checks for newer versions of itself at startup and updates in a couple of clicks."] },
   { version: "v1.1.1", date: "2026-11-10", notes: ["Fixed: mods that need the old BoneLib package (Doppel, for one) failed to install."] },
   { version: "v1.1.0", date: "2026-11-10", notes: ["Rebuilt in Rust. The download is about 1.5 MB instead of 116 MB.", "New: when minimized, BoneLaunch closes its window and waits in the system tray using about 10 MB of memory."] },

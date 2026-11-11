@@ -358,3 +358,9 @@ body.calm *, body.calm *::before, body.calm *::after { animation: none !importan
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- mod.io page ---------- */
+.howto { margin: 0 0 22px; padding: 14px 18px 14px 44px; display: grid; gap: 8px; color: #b9c5cf; }
+.howto li::marker { color: var(--accent); font: 600 15px var(--display); }
+.howto b { color: var(--text); font-weight: 600; }
+.row .noicon svg { width: 20px; height: 20px; }

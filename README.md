@@ -14,6 +14,8 @@ A mod launcher for BONELAB on Windows, with Thunderstore built in.
 - **Profiles.** Save sets of switched-on mods and swap between them. Share a profile with a friend as a code.
 - **Launch.** A big green button, plus "Launch without mods" for when something breaks.
 - **Make it yours.** Accent colors, your own background picture, fade and blur.
+- **mod.io mods too.** Grab a mod with mod.io's "Manual download" and BoneLaunch spots the zip in Downloads, installs it, and lets you switch it on or off. No account or key needed.
+- **Camerium camera built in.** One switch in Settings installs the Camerium in-game camera.
 - **Updates itself.** BoneLaunch checks for a newer version at startup and installs it when you say yes.
 - **Light when idle.** Minimize it and BoneLaunch closes its window and waits in the system tray, using about 10 MB of memory.
 

@@ -22,6 +22,12 @@ A Windows mod launcher for BONELAB. Agreed with the owner on 2026-11-09.
 - Switching a mod off renames its DLLs to `.dll.disabled`.
 - The default background is original artwork drawn by `scripts/prep-assets.js`, so the public repo ships no game art. Anyone can set their own picture in Settings.
 
+## mod.io and Camerium (1.3.0)
+
+- BoneLaunch does not call mod.io's API, because that needs a per-account key. Instead it works with mod.io's manual downloads: it looks in the Downloads folder for zips that contain a `pallet.json` file and unpacks them into `LocalLowStress Level ZeroBONELABMods`.
+- Switching a mod.io mod off moves its folder to `ModsOff-BoneLaunch` beside the Mods folder. Removing one sends it to the Recycle Bin.
+- Camerium (`DuoLab-CameriumCamera` on Thunderstore) has its own switch in Settings. Switching it on installs it from Thunderstore like any other mod; it is not bundled into the installer.
+
 ## Updating itself
 
 - From 1.2.0, BoneLaunch asks GitHub for the newest release at startup (at most every 3 hours) and compares the version in the asset name `BoneLaunch-Setup-<version>.exe` (or `-Portable-`) with its own.

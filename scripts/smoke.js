@@ -131,6 +131,21 @@ async function connect() {
     await wait(500);
     await shot('7-settings');
     log('loader text:', await js('[...document.querySelectorAll(".opt-text span")].map(s=>s.textContent).find(t=>/Thunderstore mods need/.test(t))'));
+    if (!real && process.env.SMOKE_CAMERIUM) {
+      log('camerium on:', await click('[data-camerium]'));
+      for (let i = 0; i < 120 && !fs.existsSync(path.join(fake, 'Mods', 'Camerium.dll')); i++) await wait(500);
+      await wait(2500);
+      log('Mods folder:', fs.readdirSync(path.join(fake, 'Mods')).join(', '));
+      log('switch shows on:', await js('document.querySelector("[data-camerium]").checked'));
+      await shot('8-camerium');
+      log('camerium off:', await click('[data-camerium]'));
+      await wait(1500);
+      log('Mods folder:', fs.readdirSync(path.join(fake, 'Mods')).join(', '));
+      log('switch shows on:', await js('document.querySelector("[data-camerium]").checked'));
+      log('camerium on again:', await click('[data-camerium]'));
+      await wait(1500);
+      log('Mods folder:', fs.readdirSync(path.join(fake, 'Mods')).join(', '));
+    }
     await click('[data-page="home"]');
     await wait(900);
     await shot('9-home-after');

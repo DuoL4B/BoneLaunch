@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod game;
+mod modio;
 mod mods;
 mod store;
 mod thunderstore;
@@ -504,6 +505,34 @@ async fn dispatch(app: &AppHandle, window: &WebviewWindow, st: &AppState, channe
         "cache:clear" => {
             st.ts.clear_cache(&st.store);
             let _ = fs::remove_dir_all(temp_dir());
+            Ok(Value::Null)
+        }
+
+        "modio:list" => Ok(json!({ "mods": modio::list(), "zips": modio::scan_downloads(&st.store) })),
+        "modio:installZip" => {
+            let _job = st.jobs.lock().await;
+            let picked = arg_str(args, 0);
+            let zip_path = if picked.is_empty() {
+                let dialog = rfd::FileDialog::new().set_title("Pick a mod.io zip").add_filter("Mod zip", &["zip"]).set_directory(modio::downloads_dir());
+                let Some(p) = dialog.pick_file() else { return Ok(Value::Null) };
+                p
+            } else {
+                PathBuf::from(picked)
+            };
+            let is_zip = zip_path.extension().map(|e| e.eq_ignore_ascii_case("zip")).unwrap_or(false);
+            if !is_zip || !zip_path.is_file() {
+                return Err("That zip file is no longer there.".into());
+            }
+            Ok(json!(modio::install_zip(&st.store, &zip_path)?))
+        }
+        "modio:toggle" => {
+            let _job = st.jobs.lock().await;
+            modio::set_enabled(&arg_str(args, 0), arg_bool(args, 1))?;
+            Ok(Value::Null)
+        }
+        "modio:remove" => {
+            let _job = st.jobs.lock().await;
+            modio::remove(&arg_str(args, 0))?;
             Ok(Value::Null)
         }
 

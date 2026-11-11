@@ -16,6 +16,8 @@ const LOADER = 'LavaGang-MelonLoader';
 const HIDDEN_PACKAGES = new Set([LOADER, 'ebkr-r2modman']);
 const ACCENTS = { cyan: '#5fe0ea', ember: '#ff8a3c', violet: '#a78bfa', lime: '#c4f24a', rose: '#ff6f91', ice: '#dfeff2' };
 const PAGE_SIZE = 60;
+const CAMERIUM = 'DuoLab-CameriumCamera';
+const CAMERIUM_BY_HAND = 'manual:Mods/Camerium.dll';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const main = $('#main');
@@ -42,6 +44,7 @@ const S = {
   inst: { q: '', filter: 'all' },
   modalResolve: null,
   appUpdate: null,
+  modio: { mods: [], zips: [], q: '', loaded: false },
   updateAsked: false,
 };
 
@@ -105,6 +108,7 @@ const ICON = {
   link: I('<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'),
   grid: I('<rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/>'),
   list: I('<path d="M4 6h16M4 12h16M4 18h16"/>'),
+  globe: I('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/>'),
   copy: I('<rect x="9" y="9" width="11" height="11" rx="1.5"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/>'),
 };
 
@@ -264,6 +268,7 @@ function renderNav() {
     ['home', 'Home', ICON.home, ''],
     ['browse', 'Browse', ICON.browse, ''],
     ['installed', 'Installed', ICON.box, ups ? `<span class="nav-count hot" title="${ups} updates">${ups}</span>` : S.installed.length ? `<span class="nav-count">${S.installed.length}</span>` : ''],
+    ['modio', 'mod.io', ICON.globe, S.modio.zips.length ? `<span class="nav-count hot" title="Zips ready to install">${S.modio.zips.length}</span>` : ''],
     ['profiles', 'Profiles', ICON.layers, ''],
     ['settings', 'Settings', ICON.gear, ''],
   ];
@@ -590,6 +595,28 @@ function renderSettings() {
         ${opt('Debug mode', 'Extra detail in the log. Handy when a mod misbehaves.', sw('mlDebug'))}
       </section>
 
+      <section class="panel set"><h2>Camerium camera</h2>
+        ${(() => {
+          const c = cameriumState();
+          const pkg = S.byId.get(CAMERIUM);
+          const busy = S.busy.has(CAMERIUM);
+          let status = 'Not installed. Switching it on downloads it from Thunderstore, with BoneLib if you need it.';
+          if (c.tracked) status = 'Installed, version ' + esc(c.tracked.version) + (hasUpdate(c.tracked) ? '. Version ' + esc(pkg.version) + ' is available.' : '.');
+          else if (c.manual) status = 'Found a copy you added by hand.';
+          if (!g) status = 'Find the game first.';
+          return opt(
+            'In-game camera',
+            '9 camera modes (handheld, bodycam, tripod, drone and more) and 11 looks such as camcorder, VHS and CCTV. Set it up in BoneMenu in the game. ' + status,
+            `<div class="opt-buttons">
+              ${pkg ? `<button class="btn sm ghost" data-action="details" data-id="${CAMERIUM}">Details</button>` : ''}
+              ${c.tracked && hasUpdate(c.tracked) && !busy ? `<button class="btn sm warn" data-action="install" data-id="${CAMERIUM}">${ICON.up} Update</button>` : ''}
+              ${busy ? '<button class="btn sm" disabled>Working…</button>' : ''}
+              <label class="switch"><input type="checkbox" data-camerium ${c.on ? 'checked' : ''} ${!g || busy ? 'disabled' : ''} aria-label="Switch Camerium camera on or off"><i></i></label>
+            </div>`
+          );
+        })()}
+      </section>
+
       <section class="panel set"><h2>Launching</h2>
         ${opt('After pressing Launch', '', `<select class="field" data-setting="afterLaunch">
           <option value="stay" ${s.afterLaunch === 'stay' ? 'selected' : ''}>Keep BoneLaunch open</option>
@@ -650,7 +677,7 @@ function render() {
   const samePage = document.body.dataset.page === S.page;
   document.body.dataset.page = S.page;
   renderNav();
-  const pages = { home: renderHome, browse: renderBrowse, installed: renderInstalled, profiles: renderProfiles, settings: renderSettings };
+  const pages = { home: renderHome, browse: renderBrowse, installed: renderInstalled, modio: renderModio, profiles: renderProfiles, settings: renderSettings };
   const active = document.activeElement;
   const keep = active && active.dataset && active.dataset.input ? { key: active.dataset.input, pos: active.selectionStart } : null;
   main.innerHTML = pages[S.page]();
@@ -941,6 +968,7 @@ const ACTIONS = {
     S.page = el.dataset.page;
     closeDrawer();
     render();
+    if (S.page === 'modio') loadModio();
   },
   'win-min': () => api.call('win:min'),
   'win-max': () => api.call('win:max'),
@@ -1126,8 +1154,153 @@ const ACTIONS = {
   },
   'modal-cancel': () => closeModal(false),
   'app-update': () => installAppUpdate(),
+  'modio-scan': () => loadModio().then(() => toast(S.modio.zips.length ? `Found ${S.modio.zips.length} zip${S.modio.zips.length === 1 ? '' : 's'} ready to install.` : 'No new mod.io zips in Downloads.')),
+  'modio-zip': () => modioInstall(''),
+  'modio-install': (el) => modioInstall(el.dataset.path),
+  'modio-remove': (el) => modioRemove(el.dataset.folder),
   'app-update-check': () => checkAppUpdate(true),
 };
+
+/* ---------- mod.io mods (manual downloads, no account) ---------- */
+
+async function loadModio() {
+  try {
+    const r = await api.call('modio:list');
+    S.modio.mods = r.mods;
+    S.modio.zips = r.zips;
+  } catch (err) {
+    toast(err.message, 'err');
+  }
+  S.modio.loaded = true;
+  if (S.page === 'modio' && $('#modal').hidden) render();
+  else renderNav();
+}
+
+function modioRows() {
+  const q = S.modio.q.toLowerCase().trim();
+  const list = q ? S.modio.mods.filter((m) => (m.title + ' ' + m.author + ' ' + m.barcode).toLowerCase().includes(q)) : S.modio.mods;
+  if (!S.modio.loaded) return '<div class="empty"><b>Looking</b>Reading your mod.io mods folder…</div>';
+  if (!S.modio.mods.length) return '<div class="empty"><b>No mod.io mods yet</b>Follow the three steps above to add your first one.</div>';
+  if (!list.length) return '<div class="empty"><b>Nothing matches</b>No mod.io mods fit that search.</div>';
+  return `<div class="rows">${list
+    .map(
+      (m) => `
+    <div class="row ${m.enabled ? '' : 'off'}">
+      <div class="noicon">${esc((m.title || '?')[0].toUpperCase())}</div>
+      <div style="min-width:0">
+        <h3><span>${esc(m.title)}</span></h3>
+        <div class="by">${esc([m.author, m.version ? 'v' + m.version : '', m.barcode].filter(Boolean).join(' · '))}</div>
+      </div>
+      <div class="row-actions">
+        <button class="btn sm icon ghost" data-action="modio-remove" data-folder="${esc(m.folder)}" title="Remove" aria-label="Remove ${esc(m.title)}">${ICON.trash}</button>
+      </div>
+      <label class="switch" title="${m.enabled ? 'Switched on' : 'Switched off'}"><input type="checkbox" data-modio="${esc(m.folder)}" ${m.enabled ? 'checked' : ''} aria-label="Switch ${esc(m.title)} on or off"><i></i></label>
+    </div>`
+    )
+    .join('')}</div>`;
+}
+
+function renderModio() {
+  const mods = S.modio.mods;
+  const zips = S.modio.zips;
+  return `
+  <div class="page">
+    <div class="page-head"><h1>mod.io</h1><span class="sub">${mods.length} mod${mods.length === 1 ? '' : 's'}, ${mods.filter((m) => m.enabled).length} switched on</span><span class="spacer"></span>
+      <button class="btn sm primary" data-action="open-url" data-url="https://mod.io/g/bonelab">${ICON.globe} Open mod.io</button>
+      <button class="btn sm" data-action="modio-zip">${ICON.down} Install a zip</button>
+      <button class="btn sm ghost" data-action="open-folder" data-key="locallow">${ICON.folder} Mods folder</button>
+    </div>
+
+    <ol class="panel howto">
+      <li><b>Find a mod on mod.io.</b> Avatars, maps, weapons and spawnables live there. No account needed.</li>
+      <li><b>Use its "Manual download" and pick the Windows file.</b> Let it save to your Downloads folder.</li>
+      <li><b>Come back here.</b> BoneLaunch spots the zip and installs it in one click.</li>
+    </ol>
+
+    ${
+      zips.length
+        ? `<div class="section-title">Ready in your Downloads folder</div>
+          <div class="rows" style="margin-bottom:22px">${zips
+            .map(
+              (z) => `<div class="row"><div class="noicon">${ICON.down}</div>
+                <div style="min-width:0"><h3><span>${esc(z.name)}</span></h3><div class="by">${mb(z.size)} · downloaded ${ago(z.modified)}</div></div>
+                <div class="row-actions"><button class="btn sm go" data-action="modio-install" data-path="${esc(z.path)}">${ICON.down} Install</button></div><span></span></div>`
+            )
+            .join('')}</div>`
+        : ''
+    }
+
+    <div class="toolbar">
+      <label class="search">${ICON.browse}<input class="field" data-input="modio-q" placeholder="Filter mod.io mods" value="${esc(S.modio.q)}" aria-label="Filter mod.io mods"></label>
+      <button class="btn sm ghost" data-action="modio-scan">${ICON.refresh} Check Downloads again</button>
+    </div>
+    <div id="modio-rows">${modioRows()}</div>
+    <p class="fine" style="margin-top:14px">Switching a mod off moves it to a side folder the game ignores. Mods you subscribed to inside BONELAB may be downloaded again by the game.</p>
+  </div>`;
+}
+
+async function modioInstall(zipPath) {
+  try {
+    const titles = await api.call('modio:installZip', zipPath || '');
+    if (titles) toast(`Installed ${titles.join(', ')}.`, 'ok');
+  } catch (err) {
+    toast(err.message, 'err');
+  }
+  await loadModio();
+}
+
+async function modioToggle(folder, enabled) {
+  try {
+    await api.call('modio:toggle', folder, enabled);
+  } catch (err) {
+    toast(err.message, 'err');
+  }
+  await loadModio();
+}
+
+async function modioRemove(folder) {
+  const m = S.modio.mods.find((x) => x.folder === folder);
+  if (!m) return;
+  if (S.settings.confirmUninstall) {
+    const yes = await confirmBox({ title: 'Remove this mod?', text: `${m.title} will be moved to the Recycle Bin.`, ok: 'Remove', danger: true });
+    if (!yes) return;
+  }
+  try {
+    await api.call('modio:remove', folder);
+    toast(`${m.title} removed.`, 'ok');
+  } catch (err) {
+    toast(err.message, 'err');
+  }
+  await loadModio();
+}
+
+window.addEventListener('focus', () => {
+  if (S.page === 'modio') loadModio();
+});
+
+/* ---------- Camerium camera (the built-in optional mod) ---------- */
+
+function cameriumState() {
+  const tracked = installedById(CAMERIUM);
+  const manual = installedById(CAMERIUM_BY_HAND);
+  return { tracked, manual, on: !!((tracked && tracked.enabled) || (manual && manual.enabled)) };
+}
+
+async function setCamerium(on) {
+  const c = cameriumState();
+  if (!on) {
+    if (c.tracked && c.tracked.enabled) await doToggle(CAMERIUM, false);
+    if (c.manual && c.manual.enabled) await doToggle(CAMERIUM_BY_HAND, false);
+    return;
+  }
+  if (c.tracked) return doToggle(CAMERIUM, true);
+  if (c.manual) return doToggle(CAMERIUM_BY_HAND, true);
+  if (!S.byId.has(CAMERIUM)) {
+    toast("Camerium isn't in the Thunderstore list right now. Check your connection and try again.", 'err');
+    return render();
+  }
+  await doInstall(CAMERIUM);
+}
 
 /* ---------- updating BoneLaunch itself ---------- */
 
@@ -1224,6 +1397,10 @@ document.addEventListener('input', (e) => {
       fillResults();
       main.scrollTop = 0;
     }, 120);
+  } else if (t.dataset.input === 'modio-q') {
+    S.modio.q = t.value;
+    const rows = $('#modio-rows');
+    if (rows) rows.innerHTML = modioRows();
   } else if (t.dataset.input === 'inst-q') {
     S.inst.q = t.value;
     const box = $('#inst-rows');
@@ -1237,6 +1414,8 @@ document.addEventListener('input', (e) => {
 document.addEventListener('change', async (e) => {
   const t = e.target;
   if (t.dataset.toggle) return doToggle(t.dataset.toggle, t.checked);
+  if (t.dataset.camerium !== undefined) return setCamerium(t.checked);
+  if (t.dataset.modio) return modioToggle(t.dataset.modio, t.checked);
   if (t.dataset.input === 'browse-sort') {
     S.browse.sort = t.value;
     S.browse.shown = PAGE_SIZE;

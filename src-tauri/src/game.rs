@@ -212,6 +212,12 @@ pub fn loader_status(game_path: &str) -> Loader {
 }
 
 pub fn local_low_mods() -> PathBuf {
+    // A test copy (own data folder) can be pointed at a pretend folder.
+    if std::env::var("BONELAUNCH_DATA").is_ok() {
+        if let Ok(p) = std::env::var("BONELAUNCH_LOCALLOW") {
+            return PathBuf::from(p);
+        }
+    }
     let home = std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\".into());
     PathBuf::from(home).join("AppData").join("LocalLow").join("Stress Level Zero").join("BONELAB").join("Mods")
 }

@@ -94,7 +94,7 @@ fn is_package_file(name: &str) -> bool {
 fn is_toggleable(key: &str) -> bool {
     let k = key.to_lowercase();
     let in_code_folder = ["game:mods/", "game:plugins/", "game:userlibs/"].iter().any(|p| k.starts_with(p));
-    (in_code_folder && k.ends_with(".dll")) || (k.starts_with("local:") && k.ends_with("/pallet.json"))
+    (in_code_folder && k.ends_with(".dll")) || (k.starts_with("local:") && k.ends_with("pallet.json"))
 }
 
 /// Decides where each file in a mod zip belongs. `None` means "leave it out".
@@ -103,7 +103,7 @@ pub fn plan_routes(names: &[String], is_loader: bool) -> Vec<Option<String>> {
     let mut pallet_folders: HashSet<String> = HashSet::new();
     for n in &clean {
         let parts: Vec<&str> = n.split('/').collect();
-        if parts.len() == 2 && parts[1].eq_ignore_ascii_case("pallet.json") {
+        if parts.len() == 2 && parts[1].to_lowercase().ends_with("pallet.json") {
             pallet_folders.insert(parts[0].to_string());
         }
     }
