@@ -41,6 +41,8 @@ const S = {
   browse: { q: '', sort: 'popular', cat: '', shown: PAGE_SIZE },
   inst: { q: '', filter: 'all' },
   modalResolve: null,
+  appUpdate: null,
+  updateAsked: false,
 };
 
 /* ---------- small helpers ---------- */
@@ -279,6 +281,7 @@ function renderNav() {
   if (S.tsLoading) st.textContent = 'Loading Thunderstore…';
   else if (S.tsError) st.innerHTML = '<span class="dot red"></span> Thunderstore unreachable';
   else st.innerHTML = `<span class="dot ${S.offline ? 'ember' : 'green'}"></span> ${S.offline ? 'Offline, showing saved list' : fmt(S.packages.length) + ' mods on Thunderstore'}`;
+  if (S.appUpdate) st.insertAdjacentHTML('afterbegin', `<button class="chip ember" data-action="app-update" title="A newer BoneLaunch is ready">Update to ${esc(S.appUpdate.version)}</button>`);
 }
 
 /* ---------- pages ---------- */
@@ -632,6 +635,8 @@ function renderSettings() {
       <section class="panel set"><h2>Upkeep</h2>
         ${opt('Latest game log', 'What MelonLoader wrote the last time the game ran.', '<button class="btn sm" data-action="view-log">View log</button>')}
         ${opt('Mod list', S.fetchedAt ? 'Last fetched ' + ago(S.fetchedAt) + '.' : '', `<div class="opt-buttons"><button class="btn sm" data-action="refresh-ts">${ICON.refresh} Refresh now</button><button class="btn sm ghost" data-action="clear-cache">Clear saved list</button></div>`)}
+        ${opt('BoneLaunch updates', S.appUpdate ? 'Version ' + esc(S.appUpdate.version) + ' is ready. You have ' + esc(S.version) + '.' : 'You have version ' + esc(S.version) + '.', `<div class="opt-buttons">${S.appUpdate ? '<button class="btn sm warn" data-action="app-update">Update now</button>' : ''}<button class="btn sm" data-action="app-update-check">${ICON.refresh} Check now</button></div>`)}
+        ${opt('Check for BoneLaunch updates at startup', 'Old versions can stop working when the game or Thunderstore changes.', sw('checkAppUpdates'))}
         ${opt('Reset settings', 'Puts every option back to how it started. Your mods and profiles stay.', '<button class="btn sm danger" data-action="reset-settings">Reset</button>')}
       </section>
 
@@ -1120,7 +1125,49 @@ const ACTIONS = {
     closeModal(true);
   },
   'modal-cancel': () => closeModal(false),
+  'app-update': () => installAppUpdate(),
+  'app-update-check': () => checkAppUpdate(true),
 };
+
+/* ---------- updating BoneLaunch itself ---------- */
+
+async function checkAppUpdate(manual) {
+  if (!manual && S.settings.checkAppUpdates === false) return;
+  try {
+    S.appUpdate = await api.call('update:check', !!manual);
+  } catch (err) {
+    if (manual) toast(err.message, 'err');
+    return;
+  }
+  renderNav();
+  if (S.page === 'settings' && $('#modal').hidden) render();
+  if (!S.appUpdate) {
+    if (manual) toast('BoneLaunch is up to date.', 'ok');
+    return;
+  }
+  if (manual || !S.updateAsked) {
+    S.updateAsked = true;
+    installAppUpdate();
+  }
+}
+
+async function installAppUpdate() {
+  const u = S.appUpdate;
+  if (!u || !$('#modal').hidden) return;
+  const yes = await confirmBox({
+    title: `BoneLaunch ${u.version} is ready`,
+    text: `You have ${S.version}. Updating takes a few seconds, then BoneLaunch reopens. Your mods and settings stay.` + (u.notes ? '\n\nWhat changed:\n' + u.notes : ''),
+    ok: 'Update now',
+    cancel: 'Later',
+  });
+  if (!yes) return;
+  try {
+    await api.call('update:install');
+    toast('Update downloaded. BoneLaunch is restarting.', 'ok');
+  } catch (err) {
+    toast(err.message, 'err');
+  }
+}
 
 async function useProfile(name) {
   const ids = S.settings.profiles[name];
@@ -1256,4 +1303,5 @@ async function pollRunning() {
   await loadPackages(false);
   const ups = updates().length;
   if (ups && S.settings.checkUpdatesOnStart) toast(`${ups} mod update${ups === 1 ? '' : 's'} available.`);
+  checkAppUpdate(false);
 })();

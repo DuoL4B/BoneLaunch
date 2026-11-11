@@ -4,6 +4,7 @@ mod game;
 mod mods;
 mod store;
 mod thunderstore;
+mod update;
 
 use base64::Engine;
 use serde_json::{json, Value};
@@ -29,6 +30,22 @@ struct AppState {
     portable: bool,
     /// True while the window is closed and only the tray icon is left.
     sleeping: AtomicBool,
+    /// When BoneLaunch last looked for a newer version of itself, and what it found.
+    update: Mutex<(Option<Instant>, Option<update::UpdateInfo>)>,
+}
+
+/// True for a copy started with its own data folder, which is how the test script runs it.
+fn test_mode() -> bool {
+    std::env::var("BONELAUNCH_DATA").is_ok()
+}
+
+fn current_version(app: &AppHandle) -> String {
+    if test_mode() {
+        if let Ok(v) = std::env::var("BONELAUNCH_VERSION") {
+            return v;
+        }
+    }
+    app.package_info().version.to_string()
 }
 
 const TRAY_ID: &str = "main";
@@ -276,7 +293,7 @@ async fn dispatch(app: &AppHandle, window: &WebviewWindow, st: &AppState, channe
             Ok(json!({
                 "settings": public_settings(st),
                 "game": found,
-                "version": app.package_info().version.to_string(),
+                "version": current_version(app),
                 "portable": st.portable,
                 "dataDir": st.store.dir.to_string_lossy()
             }))
@@ -490,6 +507,67 @@ async fn dispatch(app: &AppHandle, window: &WebviewWindow, st: &AppState, channe
             Ok(Value::Null)
         }
 
+        "update:check" => {
+            let force = arg_bool(args, 0);
+            let cached = {
+                let last = st.update.lock().unwrap();
+                let recent = last.0.map(|t| t.elapsed() < Duration::from_secs(3 * 3600)).unwrap_or(false);
+                if recent && !force { Some(last.1.clone()) } else { None }
+            };
+            let found = match cached {
+                Some(found) => found,
+                None => {
+                    let found = update::check(&st.ts.http, &current_version(app), st.portable).await?;
+                    *st.update.lock().unwrap() = (Some(Instant::now()), found.clone());
+                    found
+                }
+            };
+            Ok(json!(found))
+        }
+        "update:install" => {
+            let Ok(_job) = st.jobs.try_lock() else {
+                return Err("Wait for the current mod install to finish, then update.".into());
+            };
+            let info = st.update.lock().unwrap().1.clone().ok_or("There is no update to install.")?;
+            let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+            let dest = if st.portable {
+                exe.parent().map(|d| d.join(&info.name)).ok_or("Could not find BoneLaunch's own folder.")?
+            } else {
+                temp_dir().join(&info.name)
+            };
+            if dest == exe {
+                return Err("This copy already has the newest file name. Download the update from the website instead.".into());
+            }
+            let label = format!("BoneLaunch {}", info.version);
+            let step = |done: u64, total: u64| json!({ "id": "app-update", "name": label, "index": 1, "count": 1, "phase": "download", "done": done, "total": total });
+            let _ = app.emit("progress", step(0, info.size));
+            let mut last = Instant::now();
+            let result = update::download(&st.ts.http, &info, &dest, |done, total| {
+                if last.elapsed() > Duration::from_millis(80) {
+                    last = Instant::now();
+                    let _ = app.emit("progress", step(done, total));
+                }
+            })
+            .await;
+            let _ = app.emit("progress", json!({ "phase": "done" }));
+            result?;
+            if test_mode() && std::env::var("BONELAUNCH_UPDATE_DRYRUN").is_ok() {
+                return Ok(json!({ "version": info.version, "saved": dest.to_string_lossy() }));
+            }
+            // The installer runs quietly and reopens BoneLaunch; a portable copy is simply started.
+            let mut cmd = std::process::Command::new(&dest);
+            if !st.portable {
+                cmd.args(["/P", "/R"]);
+            }
+            cmd.spawn().map_err(|e| format!("Could not start the update: {e}"))?;
+            let handle = app.clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(900)).await;
+                handle.exit(0);
+            });
+            Ok(json!({ "version": info.version }))
+        }
+
         "win:min" => {
             let _ = window.minimize();
             Ok(Value::Null)
@@ -525,6 +603,7 @@ fn main() {
         jobs: tokio::sync::Mutex::new(()),
         portable,
         sleeping: AtomicBool::new(false),
+        update: Mutex::new((None, None)),
     };
 
     // A copy pointed at its own data folder (used for testing) may run beside the normal one.

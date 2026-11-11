@@ -26,6 +26,7 @@ fn defaults() -> Value {
         "showDeprecated": false,
         "hideAi": false,
         "checkUpdatesOnStart": true,
+        "checkAppUpdates": true,
         "autoUpdateMods": false,
         "installDeps": true,
         "confirmUninstall": true,

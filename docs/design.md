@@ -22,6 +22,13 @@ A Windows mod launcher for BONELAB. Agreed with the owner on 2026-11-09.
 - Switching a mod off renames its DLLs to `.dll.disabled`.
 - The default background is original artwork drawn by `scripts/prep-assets.js`, so the public repo ships no game art. Anyone can set their own picture in Settings.
 
+## Updating itself
+
+- From 1.2.0, BoneLaunch asks GitHub for the newest release at startup (at most every 3 hours) and compares the version in the asset name `BoneLaunch-Setup-<version>.exe` (or `-Portable-`) with its own.
+- The user is asked before anything is installed. The download must come from this repository's release URL and match GitHub's published SHA-256 digest.
+- Installed copies run the installer quietly (`/P /R`) and it reopens the app. Portable copies save the new exe beside themselves and start it.
+- Versions before 1.2.0 have no updater and must be updated by hand once.
+
 ## Left out for now
 
 - Switching between game patches (1 to 6). May come later.

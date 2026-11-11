@@ -162,7 +162,7 @@ pub fn now_ms() -> u64 {
 }
 
 pub struct Client {
-    http: reqwest::Client,
+    pub http: reqwest::Client,
     memory: Mutex<Option<Arc<Catalog>>>,
 }
 

@@ -14,6 +14,7 @@ A mod launcher for BONELAB on Windows, with Thunderstore built in.
 - **Profiles.** Save sets of switched-on mods and swap between them. Share a profile with a friend as a code.
 - **Launch.** A big green button, plus "Launch without mods" for when something breaks.
 - **Make it yours.** Accent colors, your own background picture, fade and blur.
+- **Updates itself.** BoneLaunch checks for a newer version at startup and installs it when you say yes.
 - **Light when idle.** Minimize it and BoneLaunch closes its window and waits in the system tray, using about 10 MB of memory.
 
 ![Browsing mods](docs/screenshots/browse.png)
@@ -55,6 +56,18 @@ npm run build
 ```
 
 The portable version is the plain `src-tauri/target/release/bonelaunch.exe`, renamed so its name contains "Portable". That name is what tells it to keep its data beside itself.
+
+## Releasing a new version
+
+BoneLaunch finds updates by looking at the newest release on this repository, so the file names matter.
+
+1. Change the version in `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and `package.json`, and the `RELEASE` block in `docs/index.html`.
+2. Run `npm run build`.
+3. Create a GitHub release and attach two files, named exactly like this (with the new version number):
+   - `BoneLaunch-Setup-1.2.0.exe` (the installer from `src-tauri/target/release/bundle/nsis/`)
+   - `BoneLaunch-Portable-1.2.0.exe` (a copy of `src-tauri/target/release/bonelaunch.exe`)
+
+Installed copies look for the `Setup` file and portable copies look for the `Portable` file. A release without them is ignored. Each download is checked against the SHA-256 fingerprint GitHub publishes for it before it runs.
 
 ## How it works
 
