@@ -99,14 +99,15 @@ function background() {
 }
 
 (async () => {
-  fs.mkdirSync(path.join(root, 'assets'), { recursive: true });
+  const assets = path.join(root, 'ui', 'assets');
+  fs.mkdirSync(assets, { recursive: true });
   fs.mkdirSync(path.join(root, 'build'), { recursive: true });
 
-  await sharp(Buffer.from(background())).jpeg({ quality: 90 }).toFile(path.join(root, 'assets', 'bg.jpg'));
+  await sharp(Buffer.from(background())).jpeg({ quality: 90 }).toFile(path.join(assets, 'bg.jpg'));
   console.log('bg.jpg written');
 
-  const png = await sharp(Buffer.from(ICON)).png().toBuffer();
-  fs.writeFileSync(path.join(root, 'assets', 'icon.png'), png);
-  fs.writeFileSync(path.join(root, 'build', 'icon.png'), png);
+  // Small copy for the title bar, large copy as the source for "npm run icons".
+  await sharp(Buffer.from(ICON)).resize(64, 64).png().toFile(path.join(assets, 'icon.png'));
+  await sharp(Buffer.from(ICON), { density: 144 }).resize(1024, 1024).png().toFile(path.join(root, 'build', 'icon.png'));
   console.log('icon.png written');
 })();

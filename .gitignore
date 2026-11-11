@@ -4,4 +4,6 @@ local/
 smoke-out/
 .claude/
 .impeccable/
+src-tauri/target/
+src-tauri/gen/
 *.log

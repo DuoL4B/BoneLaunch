@@ -1,6 +1,17 @@
 'use strict';
 
-const api = window.bone;
+// The Rust side answers every request through one "call" command.
+const api = (() => {
+  const { invoke } = window.__TAURI__.core;
+  const { listen } = window.__TAURI__.event;
+  return {
+    call: (channel, ...args) =>
+      invoke('call', { channel, args }).catch((err) => {
+        throw new Error(typeof err === 'string' ? err : (err && err.message) || String(err));
+      }),
+    on: (event, cb) => listen(event, (e) => cb(e.payload)),
+  };
+})();
 const LOADER = 'LavaGang-MelonLoader';
 const HIDDEN_PACKAGES = new Set([LOADER, 'ebkr-r2modman']);
 const ACCENTS = { cyan: '#5fe0ea', ember: '#ff8a3c', violet: '#a78bfa', lime: '#c4f24a', rose: '#ff6f91', ice: '#dfeff2' };
@@ -581,6 +592,7 @@ function renderSettings() {
           <option value="stay" ${s.afterLaunch === 'stay' ? 'selected' : ''}>Keep BoneLaunch open</option>
           <option value="minimize" ${s.afterLaunch === 'minimize' ? 'selected' : ''}>Minimize BoneLaunch</option>
           <option value="close" ${s.afterLaunch === 'close' ? 'selected' : ''}>Close BoneLaunch</option></select>`)}
+        ${opt('Free memory when minimized', 'BoneLaunch closes its window and waits in the system tray, next to the clock. Click the tray icon to bring it back.', sw('sleepInTray'))}
         ${opt('Update mods before launching', 'Installs any waiting updates first.', sw('autoUpdateMods'))}
         ${opt('Extra launch options', 'For advanced use. Added to the game\'s start command.', `<input class="field wide" data-setting="launchArgs" value="${esc(s.launchArgs)}" placeholder="e.g. --melonloader.agfregenerate" spellcheck="false">`)}
       </section>

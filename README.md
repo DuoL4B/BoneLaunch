@@ -14,6 +14,7 @@ A mod launcher for BONELAB on Windows, with Thunderstore built in.
 - **Profiles.** Save sets of switched-on mods and swap between them. Share a profile with a friend as a code.
 - **Launch.** A big green button, plus "Launch without mods" for when something breaks.
 - **Make it yours.** Accent colors, your own background picture, fade and blur.
+- **Light when idle.** Minimize it and BoneLaunch closes its window and waits in the system tray, using about 10 MB of memory.
 
 ![Browsing mods](docs/screenshots/browse.png)
 
@@ -36,24 +37,29 @@ The files are not code-signed, so Windows SmartScreen may warn you the first tim
 
 ## Build it yourself
 
-You need [Node.js](https://nodejs.org) 20 or newer.
+BoneLaunch is written in Rust with [Tauri](https://tauri.app). You need:
+
+- [Rust](https://rustup.rs)
+- Microsoft C++ Build Tools (the "Desktop development with C++" workload)
+- [Node.js](https://nodejs.org) 20 or newer, for the build tool
 
 ```bash
 npm install
-npm run assets
-npm start
+npm run dev
 ```
 
-To make the installer and the portable exe (they land in `dist/`):
+To make the installer (it lands in `src-tauri/target/release/bundle/nsis/`):
 
 ```bash
-npm run dist
+npm run build
 ```
+
+The portable version is the plain `src-tauri/target/release/bonelaunch.exe`, renamed so its name contains "Portable". That name is what tells it to keep its data beside itself.
 
 ## How it works
 
-- `src/main` is the part with access to your PC: finding the game, talking to Thunderstore, unpacking mods.
-- `src/renderer` is the window you see, in plain HTML, CSS and JavaScript.
+- `src-tauri/src` is the Rust part with access to your PC: finding the game, talking to Thunderstore, unpacking mods.
+- `ui` is the window you see, in plain HTML, CSS and JavaScript, drawn by the WebView2 engine that ships with Windows.
 - Mod zips are unpacked by folder: `Mods`, `Plugins`, `UserLibs`, `UserData` and `MelonLoader` go to the same folder in the game. Loose DLLs go to `Mods`.
 - BoneLaunch only downloads from `thunderstore.io`, and uses no accounts or API keys.
 

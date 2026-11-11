@@ -46,7 +46,7 @@ h1, h2, h3, p { margin: 0; }
 .backdrop { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .backdrop-img {
   position: absolute; inset: 0 0 auto 0; height: 68vh;
-  background: url("../../assets/bg.jpg") 70% 35% / cover no-repeat;
+  background: url("assets/bg.jpg") 70% 35% / cover no-repeat;
   opacity: var(--bg-opacity);
   filter: blur(var(--bg-blur)) saturate(1.05);
   -webkit-mask-image: linear-gradient(to bottom, #000 18%, transparent 96%), linear-gradient(to right, transparent 4%, #000 46%);

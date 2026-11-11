@@ -1,62 +1,21 @@
 {
   "name": "bonelaunch",
   "productName": "BoneLaunch",
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "private": true,
   "description": "A mod launcher for BONELAB with Thunderstore built in.",
   "author": "DuoL4B",
   "homepage": "https://duol4b.github.io/BoneLaunch/",
   "repository": { "type": "git", "url": "https://github.com/DuoL4B/BoneLaunch.git" },
   "license": "MIT",
-  "main": "src/main/main.js",
   "scripts": {
-    "start": "electron .",
+    "dev": "tauri dev",
+    "build": "tauri build",
     "assets": "node scripts/prep-assets.js",
-    "dist": "electron-builder --win --x64"
-  },
-  "build": {
-    "appId": "com.bonelaunch.app",
-    "productName": "BoneLaunch",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "src/**/*",
-      "assets/**/*",
-      "package.json"
-    ],
-    "win": {
-      "icon": "build/icon.png",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "artifactName": "BoneLaunch-Setup-${version}.exe",
-      "shortcutName": "BoneLaunch"
-    },
-    "portable": {
-      "artifactName": "BoneLaunch-Portable-${version}.exe"
-    }
-  },
-  "dependencies": {
-    "adm-zip": "^0.6.1"
+    "icons": "tauri icon build/icon.png"
   },
   "devDependencies": {
-    "electron": "^45.2.3",
-    "electron-builder": "^26.18.0",
+    "@tauri-apps/cli": "^2",
     "sharp": "^0.35.5"
   }
 }

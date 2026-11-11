@@ -430,7 +430,7 @@ h2::after { content: ""; flex: 1; height: 10px; background: repeating-linear-gra
     <div class="sec-body">
       <h2>Requirements</h2>
       <table>
-        <tr><th>Operating system</th><td>Windows 10 or 11, 64-bit</td></tr>
+        <tr><th>Operating system</th><td>Windows 10 or 11, 64-bit. Uses the WebView2 engine that comes with Windows 11; on Windows 10 the installer fetches it if it is missing.</td></tr>
         <tr><th>Game</th><td>A copy of BONELAB from Steam or the Meta (Oculus) PC app, installed on the same PC. BoneLaunch does not include the game.</td></tr>
         <tr><th>Internet</th><td>Needed to browse and download mods from Thunderstore.</td></tr>
         <tr><th>Headset</th><td>Whatever PC VR headset you already use to play BONELAB.</td></tr>
@@ -507,16 +507,17 @@ h2::after { content: ""; flex: 1; height: 10px; background: repeating-linear-gra
    ===================================================================== */
 const RELEASE = {
   repo: "DuoL4B/BoneLaunch",                  // GitHub "owner/name"
-  file: "BoneLaunch-Setup-1.0.0.exe",         // the installer attached to the release
-  portable: "BoneLaunch-Portable-1.0.0.exe",  // "" to hide the portable link
-  version: "v1.0.0",
-  size: "116 MB",
+  file: "BoneLaunch-Setup-1.1.0.exe",         // the installer attached to the release
+  portable: "BoneLaunch-Portable-1.1.0.exe",  // "" to hide the portable link
+  version: "v1.1.0",
+  size: "1.5 MB",
   date: "2026-11-10",
 };
 RELEASE.url = RELEASE.repo ? "https://github.com/" + RELEASE.repo + "/releases/latest/download/" + RELEASE.file : "";
 
 /* Revision history, newest first. Add an entry per release. */
 const REVISIONS = [
+  { version: "v1.1.0", date: "2026-11-10", notes: ["Rebuilt in Rust. The download is about 1.5 MB instead of 116 MB.", "New: when minimized, BoneLaunch closes its window and waits in the system tray using about 10 MB of memory."] },
   { version: "v1.0.0", date: "2026-11-10", notes: ["First public release.", "Thunderstore browsing and one-click installs, mod profiles, MelonLoader setup, Steam and Meta detection."] },
 ];
 /* ===================================================================== */
