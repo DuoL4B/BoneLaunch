@@ -252,8 +252,14 @@ async fn install_with_deps(app: &AppHandle, st: &AppState, id: &str, version: Op
             mods::install(&st.store, &active.path, meta, &zip_path)
         });
         let _ = fs::remove_file(&zip_path);
-        result?;
-        installed.push(p.id.clone());
+        match result {
+            Ok(_) => installed.push(p.id.clone()),
+            // Some required packages are empty placeholders that only point at
+            // their replacement (old BoneLib does this). Nothing to unpack is
+            // fine for those; it is only a failure for the mod that was asked for.
+            Err(e) if i + 1 < count && e.ends_with(mods::NO_FILES) => {}
+            Err(e) => return Err(e),
+        }
     }
     let _ = app.emit("progress", json!({ "phase": "done" }));
     Ok(json!({ "installed": installed, "missing": missing }))
@@ -521,10 +527,14 @@ fn main() {
         sleeping: AtomicBool::new(false),
     };
 
-    tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+    // A copy pointed at its own data folder (used for testing) may run beside the normal one.
+    let mut builder = tauri::Builder::default();
+    if std::env::var("BONELAUNCH_DATA").is_err() {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             open_window(app);
-        }))
+        }));
+    }
+    builder
         .setup(|app| {
             build_tray(app.handle())?;
             Ok(())

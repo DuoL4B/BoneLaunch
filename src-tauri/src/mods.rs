@@ -10,6 +10,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 const STATE: &str = "mods.json";
+pub const NO_FILES: &str = "has no files BoneLaunch knows how to install.";
 const TOP_FOLDERS: [&str; 5] = ["Mods", "Plugins", "UserLibs", "UserData", "MelonLoader"];
 
 fn yes() -> bool {
@@ -227,7 +228,7 @@ pub fn install(store: &Store, game_path: &str, mut meta: Entry, zip_path: &Path)
         }
     }
     if jobs.is_empty() {
-        return Err(format!("{} has no files BoneLaunch knows how to install.", meta.name));
+        return Err(format!("{} {NO_FILES}", meta.name));
     }
 
     let mut mods = load(store, game_path);

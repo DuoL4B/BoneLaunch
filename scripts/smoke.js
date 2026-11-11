@@ -26,7 +26,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log('[smoke]', ...a);
 
 const child = spawn(exe, [], {
-  env: { ...process.env, BONELAUNCH_DATA: data, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${PORT}` },
+  env: { ...process.env, BONELAUNCH_DATA: data, WEBVIEW2_USER_DATA_FOLDER: path.join(data, 'webview'), WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${PORT}` },
   stdio: 'ignore',
 });
 log('started pid', child.pid);
@@ -97,9 +97,9 @@ async function connect() {
     await shot('2-browse');
 
     if (!real) {
-      await js(`(()=>{const i=document.querySelector('[data-input="browse-q"]'); i.value='BoneLib'; i.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+      await js(`(()=>{const i=document.querySelector('[data-input="browse-q"]'); i.value=${JSON.stringify(process.env.SMOKE_QUERY || 'BoneLib')}; i.dispatchEvent(new Event('input',{bubbles:true}));})()`);
       await wait(600);
-      log('open card:', await click('.card[data-id="bonelib-BoneLib"]'));
+      log('open card:', await click('.card[data-id="' + (process.env.SMOKE_MOD || 'bonelib-BoneLib') + '"]'));
       await wait(1500);
       await shot('3-drawer');
       log('install:', await click('#drawer [data-action="install"]'));

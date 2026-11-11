@@ -1,6 +1,6 @@
 [package]
 name = "bonelaunch"
-version = "1.1.0"
+version = "1.1.1"
 description = "A mod launcher for BONELAB with Thunderstore built in."
 authors = ["DuoL4B"]
 license = "MIT"

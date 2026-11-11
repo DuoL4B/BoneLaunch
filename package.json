@@ -1,7 +1,7 @@
 {
   "name": "bonelaunch",
   "productName": "BoneLaunch",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "A mod launcher for BONELAB with Thunderstore built in.",
   "author": "DuoL4B",
