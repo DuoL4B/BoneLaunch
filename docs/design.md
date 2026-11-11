@@ -25,6 +25,8 @@ A Windows mod launcher for BONELAB. Agreed with the owner on 2026-11-09.
 ## mod.io and Camerium (1.3.0)
 
 - BoneLaunch does not call mod.io's API, because that needs a per-account key. Instead it works with mod.io's manual downloads: it looks in the Downloads folder for zips that contain a `pallet.json` file and unpacks them into `LocalLowStress Level ZeroBONELABMods`.
+- From 1.4.0 the mod.io site can be opened in its own BoneLaunch window. The site gets no access to BoneLaunch's commands (they are refused for any window but the main one). Links that would open a new tab are kept in the window, and finished `.zip` downloads are unpacked as mods, then the temporary file is deleted.
+- Also from 1.4.0, a user can save their own mod.io API key in Settings. It is kept in `settings.json` on their PC, never sent back to the interface, and used only for requests to mod.io. It powers a "Browse here" tab. No key ships with BoneLaunch.
 - Switching a mod.io mod off moves its folder to `ModsOff-BoneLaunch` beside the Mods folder. Removing one sends it to the Recycle Bin.
 - Camerium (`DuoLab-CameriumCamera` on Thunderstore) has its own switch in Settings. Switching it on installs it from Thunderstore like any other mod; it is not bundled into the installer.
 

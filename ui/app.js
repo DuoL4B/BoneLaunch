@@ -44,7 +44,7 @@ const S = {
   inst: { q: '', filter: 'all' },
   modalResolve: null,
   appUpdate: null,
-  modio: { mods: [], zips: [], q: '', loaded: false },
+  modio: { mods: [], zips: [], q: '', loaded: false, tab: 'mine', browse: { q: '', sort: 'popular', items: [], next: 0, more: false, loading: false, loaded: false, error: '' } },
   updateAsked: false,
 };
 
@@ -595,6 +595,19 @@ function renderSettings() {
         ${opt('Debug mode', 'Extra detail in the log. Handy when a mod misbehaves.', sw('mlDebug'))}
       </section>
 
+      <section class="panel set"><h2>mod.io</h2>
+        ${opt('Browse mod.io in a BoneLaunch window', 'Opens the real mod.io site. Anything you download there installs by itself. No account or key.', '<button class="btn sm" data-action="modio-site">Open mod.io</button>')}
+        ${opt(
+          'Your mod.io key (optional)',
+          s.modioKeySet
+            ? 'A key is saved on this PC. The "Browse here" tab on the mod.io page uses it.'
+            : 'Adds a "Browse here" tab that searches mod.io inside BoneLaunch. Sign in on mod.io, open My account, then API access, and copy the key. It is free and stays on this PC.',
+          s.modioKeySet
+            ? '<div class="opt-buttons"><span class="chip green"><span class="dot green"></span> key saved</span><button class="btn sm danger" data-action="modio-key-remove">Remove key</button></div>'
+            : '<div class="opt-buttons"><input class="field" id="modio-key" type="password" placeholder="Paste your key" autocomplete="off" spellcheck="false" aria-label="mod.io key"><button class="btn sm primary" data-action="modio-key-save">Save key</button><button class="btn sm ghost" data-action="open-url" data-url="https://mod.io/me/access">Get a key</button></div>'
+        )}
+      </section>
+
       <section class="panel set"><h2>Camerium camera</h2>
         ${(() => {
           const c = cameriumState();
@@ -968,7 +981,10 @@ const ACTIONS = {
     S.page = el.dataset.page;
     closeDrawer();
     render();
-    if (S.page === 'modio') loadModio();
+    if (S.page === 'modio') {
+      if (S.modio.tab === 'browse' && !S.modio.browse.loaded) modioSearch(false);
+      loadModio();
+    }
   },
   'win-min': () => api.call('win:min'),
   'win-max': () => api.call('win:max'),
@@ -1156,12 +1172,30 @@ const ACTIONS = {
   'app-update': () => installAppUpdate(),
   'modio-scan': () => loadModio().then(() => toast(S.modio.zips.length ? `Found ${S.modio.zips.length} zip${S.modio.zips.length === 1 ? '' : 's'} ready to install.` : 'No new mod.io zips in Downloads.')),
   'modio-zip': () => modioInstall(''),
+  'modio-site': () => api.call('modio:openSite').catch((err) => toast(err.message, 'err')),
+  'modio-tab'(el) {
+    S.modio.tab = el.dataset.tab;
+    render();
+    if (S.modio.tab === 'browse' && !S.modio.browse.loaded) modioSearch(false);
+    if (S.modio.tab === 'mine') loadModio();
+  },
+  'modio-search': () => modioSearch(false),
+  'modio-more': () => modioSearch(true),
+  'modio-api-install': (el) => modioApiInstall(Number(el.dataset.id)),
+  'modio-key-save'() {
+    const box = $('#modio-key');
+    if (box && box.value.trim()) modioSaveKey(box.value.trim());
+  },
+  'modio-key-remove': () => modioSaveKey(''),
   'modio-install': (el) => modioInstall(el.dataset.path),
   'modio-remove': (el) => modioRemove(el.dataset.folder),
   'app-update-check': () => checkAppUpdate(true),
 };
 
-/* ---------- mod.io mods (manual downloads, no account) ---------- */
+/* ---------- mod.io mods ---------- */
+// Three ways in: mod.io's own site in a BoneLaunch window (downloads install
+// themselves), a zip downloaded by hand, or the built-in Browse tab for people
+// who added their own mod.io key in Settings.
 
 async function loadModio() {
   try {
@@ -1172,7 +1206,7 @@ async function loadModio() {
     toast(err.message, 'err');
   }
   S.modio.loaded = true;
-  if (S.page === 'modio' && $('#modal').hidden) render();
+  if (S.page === 'modio' && S.modio.tab === 'mine' && $('#modal').hidden) render();
   else renderNav();
 }
 
@@ -1200,23 +1234,14 @@ function modioRows() {
     .join('')}</div>`;
 }
 
-function renderModio() {
-  const mods = S.modio.mods;
+function modioMine() {
   const zips = S.modio.zips;
   return `
-  <div class="page">
-    <div class="page-head"><h1>mod.io</h1><span class="sub">${mods.length} mod${mods.length === 1 ? '' : 's'}, ${mods.filter((m) => m.enabled).length} switched on</span><span class="spacer"></span>
-      <button class="btn sm primary" data-action="open-url" data-url="https://mod.io/g/bonelab">${ICON.globe} Open mod.io</button>
-      <button class="btn sm" data-action="modio-zip">${ICON.down} Install a zip</button>
-      <button class="btn sm ghost" data-action="open-folder" data-key="locallow">${ICON.folder} Mods folder</button>
-    </div>
-
     <ol class="panel howto">
-      <li><b>Find a mod on mod.io.</b> Avatars, maps, weapons and spawnables live there. No account needed.</li>
-      <li><b>Use its "Manual download" and pick the Windows file.</b> Let it save to your Downloads folder.</li>
-      <li><b>Come back here.</b> BoneLaunch spots the zip and installs it in one click.</li>
+      <li><b>Press "Browse mod.io".</b> The mod.io site opens in its own BoneLaunch window. No account needed.</li>
+      <li><b>Open a mod and scroll down to "Download files manually".</b> Press the download button on the Windows row.</li>
+      <li><b>That's it.</b> BoneLaunch catches the download and installs it. The mod shows up in the list below.</li>
     </ol>
-
     ${
       zips.length
         ? `<div class="section-title">Ready in your Downloads folder</div>
@@ -1229,14 +1254,128 @@ function renderModio() {
             .join('')}</div>`
         : ''
     }
-
     <div class="toolbar">
       <label class="search">${ICON.browse}<input class="field" data-input="modio-q" placeholder="Filter mod.io mods" value="${esc(S.modio.q)}" aria-label="Filter mod.io mods"></label>
-      <button class="btn sm ghost" data-action="modio-scan">${ICON.refresh} Check Downloads again</button>
+      <button class="btn sm ghost" data-action="modio-scan">${ICON.refresh} Check Downloads</button>
     </div>
     <div id="modio-rows">${modioRows()}</div>
-    <p class="fine" style="margin-top:14px">Switching a mod off moves it to a side folder the game ignores. Mods you subscribed to inside BONELAB may be downloaded again by the game.</p>
+    <p class="fine" style="margin-top:14px">Switching a mod off moves it to a side folder the game ignores. Mods you subscribed to inside BONELAB may be downloaded again by the game.</p>`;
+}
+
+function modioCard(m) {
+  const busy = S.busy.has('modio:' + m.id);
+  const logo = /^https:\/\/[a-z0-9.-]+\.(modcdn\.io|mod\.io)\//.test(m.logo) ? `<img loading="lazy" data-fallback="${esc((m.name || '?')[0])}" alt="" src="${esc(m.logo)}">` : `<div class="noicon">${esc((m.name || '?')[0].toUpperCase())}</div>`;
+  return `
+  <article class="card">
+    ${logo}
+    <div class="card-body">
+      <h3>${esc(m.name)}</h3>
+      <div class="by">${esc(m.author)}${m.version ? ' · v' + esc(m.version) : ''}${m.mature ? ' · mature' : ''}</div>
+      <p>${esc(m.summary)}</p>
+    </div>
+    <div class="card-foot">
+      <span class="meta" title="Downloads">${ICON.down}${fmt(m.downloads)}</span>
+      ${m.rating ? `<span class="meta" title="Rating">${ICON.star}${esc(m.rating)}</span>` : ''}
+      ${m.size ? `<span class="meta" title="Download size">${mb(m.size)}</span>` : ''}
+      <span class="spacer"></span>
+      ${/^https:\/\//.test(m.url) ? `<button class="btn sm ghost" data-action="open-url" data-url="${esc(m.url)}">Page</button>` : ''}
+      ${busy ? '<button class="btn sm" disabled>Working…</button>' : `<button class="btn sm go" data-action="modio-api-install" data-id="${Number(m.id)}">${ICON.down} Install</button>`}
+    </div>
+  </article>`;
+}
+
+function modioBrowseResults() {
+  const b = S.modio.browse;
+  if (b.error) return `<div class="empty"><b>mod.io said no</b>${esc(b.error)}<br><button class="btn" data-action="modio-search">${ICON.refresh} Try again</button></div>`;
+  if (b.loading && !b.items.length) return '<div class="empty"><b>Loading</b>Asking mod.io…</div>';
+  if (!b.items.length) return '<div class="empty"><b>Nothing found</b>Try a different search.</div>';
+  return `<div class="grid">${b.items.map(modioCard).join('')}</div>
+    ${b.more ? `<div style="text-align:center;margin-top:16px"><button class="btn" data-action="modio-more" ${b.loading ? 'disabled' : ''}>${b.loading ? 'Loading…' : 'Show more'}</button></div>` : ''}`;
+}
+
+function modioBrowse() {
+  if (!S.settings.modioKeySet) {
+    return `<div class="empty"><b>This tab needs a mod.io key</b>
+      mod.io only lets apps search its catalog with a key from your own account. It is free.<br>
+      Without one, "Browse mod.io" above does the same job in a separate window.<br>
+      <button class="btn primary" data-action="nav" data-page="settings">Add a key in Settings</button></div>`;
+  }
+  const b = S.modio.browse;
+  return `
+    <div class="toolbar">
+      <label class="search">${ICON.browse}<input class="field" data-input="modio-bq" placeholder="Search mod.io" value="${esc(b.q)}" aria-label="Search mod.io"></label>
+      <select class="field" data-input="modio-bsort" aria-label="Sort by">
+        ${[['popular', 'Popular'], ['downloads', 'Most downloaded'], ['newest', 'Newest'], ['updated', 'Recently updated'], ['name', 'Name A to Z']].map(([v, l]) => `<option value="${v}" ${b.sort === v ? 'selected' : ''}>${l}</option>`).join('')}
+      </select>
+    </div>
+    <div id="modio-browse">${modioBrowseResults()}</div>`;
+}
+
+function renderModio() {
+  const mods = S.modio.mods;
+  const tab = S.modio.tab;
+  return `
+  <div class="page">
+    <div class="page-head"><h1>mod.io</h1><span class="sub">${mods.length} mod${mods.length === 1 ? '' : 's'}, ${mods.filter((m) => m.enabled).length} switched on</span><span class="spacer"></span>
+      <button class="btn sm primary" data-action="modio-site">${ICON.globe} Browse mod.io</button>
+      <button class="btn sm" data-action="modio-zip">${ICON.down} Install a zip</button>
+      <button class="btn sm ghost" data-action="open-folder" data-key="locallow">${ICON.folder} Mods folder</button>
+    </div>
+    <div class="cats">
+      <button class="chip ${tab === 'mine' ? 'on' : ''}" data-action="modio-tab" data-tab="mine">My mods</button>
+      <button class="chip ${tab === 'browse' ? 'on' : ''}" data-action="modio-tab" data-tab="browse">Browse here${S.settings.modioKeySet ? '' : ' (needs a key)'}</button>
+    </div>
+    ${tab === 'browse' ? modioBrowse() : modioMine()}
   </div>`;
+}
+
+async function modioSearch(append) {
+  const b = S.modio.browse;
+  if (!S.settings.modioKeySet || b.loading) return;
+  b.loading = true;
+  b.error = '';
+  if (!append) {
+    b.items = [];
+    b.next = 0;
+  }
+  const paint = () => {
+    const box = $('#modio-browse');
+    if (box) box.innerHTML = modioBrowseResults();
+  };
+  paint();
+  const asked = b.q + '|' + b.sort;
+  try {
+    const r = await api.call('modio:search', { q: b.q, sort: b.sort, offset: b.next });
+    if (asked === b.q + '|' + b.sort) {
+      b.items = b.items.concat(r.mods);
+      b.next = r.next;
+      b.more = r.more;
+    }
+  } catch (err) {
+    b.error = err.message;
+  }
+  b.loading = false;
+  b.loaded = true;
+  paint();
+  if (asked !== b.q + '|' + b.sort) modioSearch(false);
+}
+
+async function modioApiInstall(id) {
+  const key = 'modio:' + id;
+  if (S.busy.has(key)) return;
+  const m = S.modio.browse.items.find((x) => x.id === id);
+  S.busy.add(key);
+  const box = $('#modio-browse');
+  if (box) box.innerHTML = modioBrowseResults();
+  try {
+    const titles = await api.call('modio:apiInstall', id, m ? m.name : 'mod');
+    toast(`Installed ${titles.join(', ')}.`, 'ok');
+  } catch (err) {
+    toast(err.message, 'err');
+  }
+  S.busy.delete(key);
+  await loadModio();
+  if (S.page === 'modio' && S.modio.tab === 'browse' && $('#modio-browse')) $('#modio-browse').innerHTML = modioBrowseResults();
 }
 
 async function modioInstall(zipPath) {
@@ -1274,8 +1413,26 @@ async function modioRemove(folder) {
   await loadModio();
 }
 
+async function modioSaveKey(key) {
+  try {
+    S.settings = await api.call('modio:setKey', key);
+    toast(key ? 'mod.io key saved. The Browse here tab is ready.' : 'mod.io key removed.', 'ok');
+    S.modio.browse = { q: '', sort: 'popular', items: [], next: 0, more: false, loading: false, loaded: false, error: '' };
+  } catch (err) {
+    toast(err.message, 'err');
+  }
+  render();
+}
+
 window.addEventListener('focus', () => {
-  if (S.page === 'modio') loadModio();
+  if (S.page === 'modio' && S.modio.tab === 'mine') loadModio();
+});
+
+// The mod.io window reports each download it installed.
+api.on('modio', (p) => {
+  if (p.ok) toast(`Installed ${p.titles.join(', ')} from mod.io.`, 'ok');
+  else toast(p.error, 'err');
+  loadModio();
 });
 
 /* ---------- Camerium camera (the built-in optional mod) ---------- */
@@ -1397,6 +1554,12 @@ document.addEventListener('input', (e) => {
       fillResults();
       main.scrollTop = 0;
     }, 120);
+  } else if (t.dataset.input === 'modio-bq') {
+    clearTimeout(typing);
+    typing = setTimeout(() => {
+      S.modio.browse.q = t.value;
+      modioSearch(false);
+    }, 450);
   } else if (t.dataset.input === 'modio-q') {
     S.modio.q = t.value;
     const rows = $('#modio-rows');
@@ -1416,6 +1579,10 @@ document.addEventListener('change', async (e) => {
   if (t.dataset.toggle) return doToggle(t.dataset.toggle, t.checked);
   if (t.dataset.camerium !== undefined) return setCamerium(t.checked);
   if (t.dataset.modio) return modioToggle(t.dataset.modio, t.checked);
+  if (t.dataset.input === 'modio-bsort') {
+    S.modio.browse.sort = t.value;
+    return modioSearch(false);
+  }
   if (t.dataset.input === 'browse-sort') {
     S.browse.sort = t.value;
     S.browse.shown = PAGE_SIZE;
